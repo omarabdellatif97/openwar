@@ -1,78 +1,24 @@
-var express = require('express');
+var express = require('express'),
+    fs = require('fs'),
+    app = express();
+//    eps = require('ejs'),
+//    morgan = require('morgan');
+
 var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var tanks = [];
-var bullets = [];
 
-
-function Tank(x, y, angle, id, health) {
-    this.x = x;
-    this.y = y;
-    this.angle = angle;
-    this.id = id;
-    this.health = health;
-}
-
-function Bullet(x, y, angle, id) {
-    this.x = x;
-    this.y = y;
-    this.angle = angle;
-    this.id = id;
-}
-
-setInterval(function one() {
-    io.emit('tanks', {tanks:tanks,bullets:bullets});
-	for(var i = bullets.length - 1;i>=0;i--)
-    {
-        bullets[i].x+=10*Math.cos(bullets[i].angle);
-        bullets[i].y+=10*Math.sin(bullets[i].angle);
-        if(Math.abs(bullets[i].x)>=2000||Math.abs(bullets[i].y)>=2000)
-            bullets.splice(i,1);
-    }
-}, 1000/100);
-
-
-io.on('connection', function (socket) {
-    function findTank(element) {
-        return element.id == socket.id;
-    }
-
-    console.log('A user connected');
-    console.log(socket.id);
-    tanks.push(new Tank(0, 0, 0, socket.id,100));
-    socket.on('disconnect', function () {
-        var index = tanks.findIndex(findTank);
-        tanks.splice(index,1);
-        console.log('A user disconnected');
-    });
-    socket.on('move', function (data) {
-        var index = tanks.findIndex(findTank);
-        tanks[index].x += data.x;
-        tanks[index].y += data.y;
-        tanks[index].angle = data.angle;
-    });
-    socket.on('fire', function (data) {
-        var index = tanks.findIndex(findTank);
-        var bullet = new Bullet(tanks[index].x,tanks[index].y,tanks[index].angle,socket.id);
-        bullets.push(bullet);
-    });
-});
-
-
-app.use(express.static('./'));
-app.use(express.static('./client/'));
-app.get('/', function (req, res) {
-    res.sendfile('./client/index.html');
-});
-
-// var server_port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080;
-// var server_ip_address =process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
 var ip = process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0';
 
 
-http.listen(8080,ip, function () {
-    // console.log('listening on localhost:2000');
-	 console.log('listening');
-	// console.log( "Listening on " + server_ip_address + ", port " + server_port )
+
+// app is running!
+app.get('/', function(req, res) {
+    res.send('Hello from NodeJS  at '+ new Date());
 });
+
+
+
+app.listen(8080, ip);
+
+
+
+module.exports = app;
