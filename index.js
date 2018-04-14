@@ -66,6 +66,11 @@ app.get('/', function (req, res) {
     res.sendfile('./client/index.html');
 });
 
-http.listen(process.env.PORT || 2000, function () {
+var server_port = process.env.OPENSHIFT_NODEJS_PORT || 2000;
+var server_ip_address = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+
+
+http.listen(server_port,server_ip_address, function () {
     // console.log('listening on localhost:2000');
+	console.log( "Listening on " + server_ip_address + ", port " + server_port )
 });
