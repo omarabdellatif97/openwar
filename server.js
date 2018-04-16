@@ -1,24 +1,75 @@
-var express = require('express'),
-    fs = require('fs'),
-    app = express();
-//    eps = require('ejs'),
-//    morgan = require('morgan');
-
+var express = require('express');
 var app = express();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var tanks = [];
+var bullets = [];
 
-var ip = process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0';
+
+function Tank(x, y, angle, id, health) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.id = id;
+    this.health = health;
+}
+
+function Bullet(x, y, angle, id) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.id = id;
+}
+
+setInterval(function one() {
+    io.emit('tanks', {tanks:tanks,bullets:bullets});
+	for(var i = bullets.length - 1;i>=0;i--)
+    {
+        bullets[i].x+=10*Math.cos(bullets[i].angle);
+        bullets[i].y+=10*Math.sin(bullets[i].angle);
+        if(Math.abs(bullets[i].x)>=2000||Math.abs(bullets[i].y)>=2000)
+            bullets.splice(i,1);
+    }
+}, 40);
 
 
+io.on('connection', function (socket) {
+    function findTank(element) {
+        return element.id == socket.id;
+    }
 
-// app is running!
-app.get('/', function(req, res) {
-    res.send('Hello from NodeJS  at '+ new Date());
+    console.log('A user connected');
+    console.log(socket.id);
+    tanks.push(new Tank(0, 0, 0, socket.id,100));
+    socket.on('disconnect', function () {
+        var index = tanks.findIndex(findTank);
+        tanks.splice(index,1);
+        console.log('A user disconnected');
+    });
+    socket.on('move', function (data) {
+        var index = tanks.findIndex(findTank);
+        tanks[index].x += data.x;
+        tanks[index].y += data.y;
+        tanks[index].angle = data.angle;
+    });
+    socket.on('fire', function (data) {
+        var index = tanks.findIndex(findTank);
+        var bullet = new Bullet(tanks[index].x,tanks[index].y,tanks[index].angle,socket.id);
+        bullets.push(bullet);
+    });
 });
 
 
+app.use(express.static('./'));
+app.use(express.static('./client/'));
+app.get('/', function (req, res) {
+    res.sendfile('./client/index.html');
+});
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080,
+    ip   = process.env.IP   || process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0';
 
-app.listen(8080, ip);
 
 
-
-module.exports = app;
+http.listen(port,ip, function () {
+    console.log('listening');
+});
