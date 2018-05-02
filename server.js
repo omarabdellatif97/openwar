@@ -4,6 +4,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var bullets = [];
 var tanks = new Map();
+var killedTanks = new Map();
 var qt = require('./quadtree');
 
 
@@ -22,6 +23,7 @@ function Tank(x, y, angle, id, health) {
     this.id = id;
     this.health = health;
     this.canFire = true;
+    this.score = 0;
 }
 
 function Bullet(x, y, angle, id) {
@@ -83,7 +85,7 @@ setInterval(function one() {
             let other = point.userData;
 
             if (t.id != other.id) {
-                if(dist(t,other)<=40)
+                if(dist(t,other)<=20+10)
                 {
                     t.health-=10;
                     // let index = bullets.findIndex(findBullet);
@@ -94,8 +96,10 @@ setInterval(function one() {
                     //         bullets.splice(i,1);
                     //     }
                     // }
-                    console.log(point.index);
-                    bullets.splice(point.index,1);
+                    // console.log(dist(t,other));
+                    // console.log(point.index);
+                  	bullets.splice(point.index,1);
+                    
 
                     // var index = bullets.findIndex(findBullet,other.id);
                     // console.log(index);
@@ -110,6 +114,11 @@ setInterval(function one() {
                     // points.splice(index2,1);
                     if(t.health<=0)
                     {
+                    	if(tanks.has(other.id))
+				        {
+				            tanks.get(other.id).score = tanks.get(other.id).score + 1;
+				        }
+				        killedTanks.set(pid,tanks.get(pid));
                         tanks.delete(pid);
                         break;
                     }
@@ -152,10 +161,27 @@ io.on('connection', function (socket) {
             tanks.get(socket.id).angle = data.angle;
         }
     });
+
+
+socket.on('continue_playing', function (data) {
+        if(killedTanks.has(socket.id))
+        {
+        	var mytank = killedTanks.get(socket.id);
+        	mytank.health = 100;
+            tanks.set(socket.id,mytank);
+            killedTanks.delete(socket.id);
+        }
+    });
+
+
     socket.on('fire', function (data) {
         if(tanks.has(socket.id)&&tanks.get(socket.id).canFire)
-        {
-            var bullet = new Bullet(tanks.get(socket.id).x,tanks.get(socket.id).y,tanks.get(socket.id).angle,socket.id);
+        {	
+
+
+        	// 10*Math.cos(bullets[i].angle);
+			// 10*Math.sin(bullets[i].angle);
+            var bullet = new Bullet(tanks.get(socket.id).x + 50*Math.cos(tanks.get(socket.id).angle),tanks.get(socket.id).y + 50*Math.sin(tanks.get(socket.id).angle),tanks.get(socket.id).angle,socket.id);
             bullets.push(bullet);
             tanks.get(socket.id).canFire = false;
             // tanks
